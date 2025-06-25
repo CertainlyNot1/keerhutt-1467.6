@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="content-section">
+    <h1 class="text-center mb-4">{{ quiz.title }}</h1>
+    
+    <div class="progress mb-4">
+        <div class="progress-bar" role="progressbar" 
+             style="width: {{ (current_question_number / total_questions) * 100 }}%" 
+             aria-valuenow="{{ current_question_number }}" 
+             aria-valuemin="1" 
+             aria-valuemax="{{ total_questions }}">
+            Question {{ current_question_number }} of {{ total_questions }}
+        </div>
+    </div>
+    
+    <form method="POST" action="">
+        {% if current_question %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Question {{ current_question_number }}: {{ current_question.text }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    {% for answer in current_question.answers %}
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" 
+                               name="question_{{ current_question.id }}" 
+                               id="answer_{{ answer.id }}" 
+                               value="{{ answer.id }}"
+                               {% if session.get('quiz_' ~ quiz.id ~ '_answers', {}).get(current_question.id|string) == answer.id|string %}checked{% endif %}>
+                        <label class="form-check-label" for="answer_{{ answer.id }}">
+                            {{ answer.text }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="form-group d-flex justify-content-between">
+            {% if current_question_number > 1 %}
+                <a href="{{ url_for('quiz.Play_qizz', quiz_id=quiz.id, question=current_question_number-1) }}" 
+                   class="btn btn-secondary">Previous Question</a>
+            {% else %}
+                <div></div> <!-- Empty div for spacing -->
+            {% endif %}
+            
+            {% if current_question_number < total_questions %}
+                <button type="submit" class="btn btn-primary">Next Question</button>
+            {% else %}
+                <button type="submit" name="submit_quiz" class="btn btn-success">Submit Quiz</button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="content-section">
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <fieldset class="form-group">
+            <legend class="border-bottom mb-4">Add Question to: {{ quiz.title }}</legend>
+            
+            <div class="form-group mb-3">
+                {{ form.text.label(class="form-control-label") }}
+                {% if form.text.errors %}
+                    {{ form.text(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.text.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.text(class="form-control form-control-lg") }}
+                {% endif %}
+            </div>
+
+            <h5 class="mt-4">Answers</h5>
+            
+            <div class="form-group mb-3">
+                {{ form.answer1_text.label(class="form-control-label") }}
+                {{ form.answer1_text(class="form-control") }}
+            </div>
+            
+            <div class="form-group mb-3">
+                {{ form.answer2_text.label(class="form-control-label") }}
+                {{ form.answer2_text(class="form-control") }}
+            </div>
+            
+            <div class="form-group mb-3">
+                {{ form.answer3_text.label(class="form-control-label") }}
+                {{ form.answer3_text(class="form-control") }}
+            </div>
+            
+            <div class="form-group mb-3">
+                {{ form.answer4_text.label(class="form-control-label") }}
+                {{ form.answer4_text(class="form-control") }}
+            </div>
+            
+            <div class="form-group mb-3">
+                {{ form.Correct_answer.label(class="form-control-label") }}
+                {{ form.Correct_answer(class="form-select") }}
+            </div>
+        </fieldset>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary") }}
+            <button type="submit" name="add_more" value="True" class="btn btn-secondary">Add Another Question</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
