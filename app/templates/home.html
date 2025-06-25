@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="jumbotron text-center">
+    <h1 class="display-4">Welcome to Quiz App!</h1>
+    <p class="lead">Test your knowledge with our interactive quizzes</p>
+    <hr class="my-4">
+    {% if current_user.is_authenticated %}
+        <p>Ready to take a quiz or create your own?</p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+            <a class="btn btn-primary btn-lg px-4 gap-3" href="{{ url_for('quiz.quiz_home') }}" role="button">Browse Quizzes</a>
+        </div>
+    {% else %}
+        <p>Get started by creating an account or logging in</p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+            <a class="btn btn-primary btn-lg px-4 gap-3" href="{{ url_for('auth.register') }}" role="button">Register</a>
+            <a class="btn btn-outline-secondary btn-lg px-4" href="{{ url_for('auth.login') }}" role="button">Login</a>
+        </div>
+    {% endif %}
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Create Quizzes</h5>
+                <p class="card-text">Design your own quizzes with multiple choice questions and share them with others.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Take Challenges</h5>
+                <p class="card-text">Test your knowledge on various topics with our collection of quizzes.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Track Progress</h5>
+                <p class="card-text">See how you improve over time with our performance tracking features.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
