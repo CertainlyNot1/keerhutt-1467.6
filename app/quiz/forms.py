@@ -17,3 +17,8 @@ class Question_form(FlaskForm):
     Correct_answer = RadioField('correct_answer',choices=[('1','answer1'),('2','answer2'),('3','answer3'),('4','answer4')])
     submit = SubmitField('Add_question')
     add_more = SubmitField('Add_more_questions')
+
+class Join_game_form(FlaskForm):
+    code = StringField('Game Code', validators=[DataRequired(),Length(6, 7)])
+    username = StringField('Your Name', validators=[DataRequired(), Length(3, 45)])
+    submit = SubmitField('Join game')

@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_required, current_user
-from ..models import Quiz, Question, Answer, User
+from ..models import Quiz, Question, Answer, User, GameSesh
 from ..extensions import db
-from .forms import Quiz_form, Question_form
+from .forms import Quiz_form, Question_form, Join_game_form
 
 quiz_bp = Blueprint('quiz', __name__)
 
@@ -120,7 +120,29 @@ def delete_qizz(quiz_id):
     flash('Deleted system32 successfully!)', 'success')
     return redirect(url_for('quiz.quiz_home'))
 
+@quiz_bp.route('/quiz/<int:quiz_id>/host', methods=['GET'])
+@login_required
+def host_quiz(quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
 
+    code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
+    Game_sesh = GameSesh(
+        quiz_id=quiz.id,
+        code=code,
+        is_active = True
+    )
+    db.session.add(Game_sesh)
+    db.session.commit()
 
-
+    return render_template('quiz/host.html', quiz=quiz, code=code)
+@quiz_bp.route('/join', methods=['GET','POST'])
+def join_sesh():
+    form = Join_game_form()
+    if form.validate_on_submit():
+        Game_sesh = GameSesh.query._filter_by(code=form.code.data, is_active=True).first()
+        if Game_sesh:
+            return redirect(url_for('quiz.play_live', code=form.code.data, username=form.username.data))
+        else:
+            flash('U dumb, try a different code lol','danger')
+    return render_template('quiz/join.html', form=form)
