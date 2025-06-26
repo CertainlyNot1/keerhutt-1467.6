@@ -1,5 +1,5 @@
 from flask import Flask
-from .extensions import db, bcrypt, login_manager, migrate
+from .extensions import db, bcrypt, login_manager, migrate, dirty_sock
 
 def create_app():
     app = Flask(__name__)
@@ -13,6 +13,7 @@ def create_app():
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'info'
     migrate.init_app(app, db)
+    dirty_sock.init_app(app)
     
     
 
