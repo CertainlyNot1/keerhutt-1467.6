@@ -1,8 +1,12 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_required, current_user
-from ..models import Quiz, Question, Answer, User, GameSesh
-from ..extensions import db
+from ..models import Quiz, Question, Answer, User, GameSesh, Player
+from ..extensions import db,sockatia
 from .forms import Quiz_form, Question_form, Join_game_form
+from flask_socketio import join_room,leave_room,emit
+import random
+import string
+
 
 quiz_bp = Blueprint('quiz', __name__)
 
@@ -146,3 +150,48 @@ def join_sesh():
         else:
             flash('U dumb, try a different code lol','danger')
     return render_template('quiz/join.html', form=form)
+
+@quiz_bp.route('/play/<code>/<username>')
+def Play_sesh(code,username):
+    Game_sesh = GameSesh.query.filter_by(code=code,is_active=True).first_or_404()
+    return render_template('quiz/PlaySesh.html',code=code,username=username)
+
+@sockatia.on('connect')
+def Handle_connact():
+    print('player sonnested')
+@sockatia.on('disconnected')
+def Handle_disconnact():
+    print('player discsonnested')
+
+@sockatia.on('join')
+def Handle_Join(data):
+    code = data['code']
+    username = data['username']
+    sesh_id = request.sid
+    Game_sesh = GameSesh.query.filter_by(code=code,is_active=True).first()
+    if not Game_sesh:
+        emit('error',{'message': "stoobid game code"})
+        return
+    player = Player.query.filter_by(game_sesh_id=Game_sesh.id,username=username).first()
+    if not player:
+        player = Player(
+            username=username,
+            game_sesh_id=Game_sesh.id,
+            sid=sesh_id,
+            user_id=current_user.id)
+        db.session.add(player)
+        db.session.commit()
+    else:
+        player.sid = sesh_id
+        db.session.commit()
+        flash('u are dumb','success')
+    join_room(code)
+    emit('player_joined',{'username':username},room=code)
+    if Game_sesh.curr_question > 0:
+        question = Game_sesh.quiz.questions[Game_sesh.curr_question - 1]
+        emit('question', {
+            'text': question.text,
+            'answers': [{'id': a.id, 'text': a.text} for a in question.answers],
+            'question_number': Game_sesh.curr_question,
+            'total_questions': len(Game_sesh.quiz.questions)
+        }, room=sesh_id)
