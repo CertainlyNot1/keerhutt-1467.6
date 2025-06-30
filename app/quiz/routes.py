@@ -195,3 +195,23 @@ def Handle_Join(data):
             'question_number': Game_sesh.curr_question,
             'total_questions': len(Game_sesh.quiz.questions)
         }, room=sesh_id)
+
+@sockatia.on('start_game')
+def handle_start_game(data):
+    code = data['code']
+    Game_sesh = GameSesh.query.filter_by(code=code).first()
+    if not Game_sesh:
+        return
+    
+    Game_sesh.current_question = 1
+    db.session.commit()
+
+    question = Game_sesh.quiz.questions[0]
+    emit('question', {
+        'text': question.text,
+        'answers': [{'id': a.id, 'text': a.text} for a in question.answers],
+        'question_number': 1,
+        'total_questions': len(Game_sesh.quiz.question)
+    }, room=code)
+
+    emit('game_started', room=code)
