@@ -129,7 +129,7 @@ def delete_qizz(quiz_id):
 def host_quiz(quiz_id):
     quiz = Quiz.query.get_or_404(quiz_id)
 
-    code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    code = ''.join(random.choices(string.digits, k=6))
 
     Game_sesh = GameSesh(
         quiz_id=quiz.id,
@@ -144,7 +144,7 @@ def host_quiz(quiz_id):
 def join_sesh():
     form = Join_game_form()
     if form.validate_on_submit():
-        Game_sesh = GameSesh.query._filter_by(code=form.code.data, is_active=True).first()
+        Game_sesh = GameSesh.query.filter_by(code=form.code.data, is_active=True).first()
         if Game_sesh:
             return redirect(url_for('quiz.play_live', code=form.code.data, username=form.username.data))
         else:
@@ -198,20 +198,87 @@ def Handle_Join(data):
 
 @sockatia.on('start_game')
 def handle_start_game(data):
+    try:
+        code = data['code']
+        print(f"Received start_game event for code: {code}")  # Debug
+        
+        game_sesh = GameSesh.query.filter_by(code=code).first()
+        if not game_sesh:
+            print("Game session not found")  # Debug
+            emit('error', {'message': 'Game session not found'})
+            return
+        
+        print(f"Found game session for quiz: {game_sesh.quiz.title}")  # Debug
+        
+        game_sesh.current_question = 1
+        db.session.commit()
+
+        question = game_sesh.quiz.questions[0]
+        print(f"Sending first question: {question.text}")  # Debug
+        
+        emit('question', {
+            'text': question.text,
+            'answers': [{'id': a.id, 'text': a.text} for a in question.answers],
+            'question_number': 1,
+            'total_questions': len(game_sesh.quiz.questions)
+        }, room=code)
+
+        emit('game_started', {'status': 'success'}, room=code)
+        print("Game started successfully")  # Debug
+        
+    except Exception as e:
+        print(f"Error in start_game: {str(e)}")  # Debug
+        emit('error', {'message': str(e)})
+
+@sockatia.on('answer')
+def handle_answer(data):
+    username = data['username']
+    code = data['code']
+    answer_id = data['answer_id']
+    Game_sesh = GameSesh.query.filter_by(code=code).first()
+    if not Game_sesh:
+        return
+    answer = Answer.query.get(answer_id)
+    if not answer:
+        return
+    player = Player.query.filter_by(game_sesh_id=Game_sesh.id,username=username).first()
+    if not player:
+        return
+    if answer.is_right:
+        player.score += 100
+        db.session.commit()
+    emit('answer_received',{'username':username},room=code)
+
+@sockatia.on('next_question')
+def handle_next_question(data):
     code = data['code']
     Game_sesh = GameSesh.query.filter_by(code=code).first()
     if not Game_sesh:
         return
-    
-    Game_sesh.current_question = 1
+    Game_sesh.curr_question += 1
     db.session.commit()
+    if Game_sesh.curr_question <= len(Game_sesh.quiz.questions):
+        question = Game_sesh.quiz.questions[Game_sesh.curr_question -1]
+        emit('question', {
+                'text': question.text,
+                'answers': [{'id': a.id, 'text': a.text} for a in question.answers],
+                'question_number': Game_sesh.curr_question,
+                'total_questions': len(Game_sesh.quiz.questions)
+            }, room=code)
+    else:
+        player = Player.query.filter_by(game_sesh_id=Game_sesh.id).order_by(Player.score.desc()).all()
+        emit('game_over',{'leaderboard':[{'username':i.username,'score':i.score}for i in player]},room=code)
+        Game_sesh.is_active = False
+        db.session.commit()
 
-    question = Game_sesh.quiz.questions[0]
-    emit('question', {
-        'text': question.text,
-        'answers': [{'id': a.id, 'text': a.text} for a in question.answers],
-        'question_number': 1,
-        'total_questions': len(Game_sesh.quiz.question)
-    }, room=code)
 
-    emit('game_started', room=code)
+
+
+
+
+
+
+
+
+
+

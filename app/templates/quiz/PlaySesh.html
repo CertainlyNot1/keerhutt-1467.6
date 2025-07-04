@@ -1,0 +1,143 @@
+{% extends "base.html" %} <!-- the errors stbau💔🥀🥀 -->
+
+{% block title %}Playing Quiz{% endblock %}
+
+{% block content %}
+<div class="play-sesh-container">
+    <div id="waiting-screen" class="waiting-screen">
+        <h1>Waiting for host to start the game...</h1>
+        <div class="game-info">
+            <p>Game Code: <strong>{{ code }}</strong></p>
+            <p>Username: <strong>{{ username }}</strong></p>
+        </div>
+    </div>
+
+    <div id="question-screen" class="question-screen" style="display: none;">
+        <div class="question-header">
+            <h2>Question <span id="question-number">1</span> of <span id="total-questions">0</span></h2>
+        </div>
+        <div class="question-content">
+            <h3 id="question-text"></h3>
+            <form id="answer-form">
+                <div id="answer-options" class="answer-options">
+                    <!-- Answers will be populated here -->
+                </div>
+                <button type="submit" class="btn btn-primary">Submit Answer</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="leaderboard-screen" class="leaderboard-screen" style="display: none;">
+        <h1>Game Over!</h1>
+        <h2>Final Leaderboard</h2>
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>Position</th>
+                    <th>Username</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                <!-- Leaderboard will be populated here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    const socket = io();
+    const code = "{{ code }}";
+    const username = "{{ username }}";
+    
+    // Join the game room
+    socket.emit('join', { code: code, username: username });
+
+    socket.on('question', (data) => {
+        document.getElementById('waiting-screen').style.display = 'none';
+        document.getElementById('question-screen').style.display = 'block';
+        document.getElementById('leaderboard-screen').style.display = 'none';
+
+        document.getElementById('question-text').textContent = data.text;
+        document.getElementById('question-number').textContent = data.question_number;
+        document.getElementById('total-questions').textContent = data.total_questions;
+
+        const answerOptions = document.getElementById('answer-options');
+        answerOptions.innerHTML = '';
+
+        data.answers.forEach((answer, index) => {
+            const div = document.createElement('div');
+            div.className = 'form-check';
+            
+            const input = document.createElement('input');
+            input.className = 'form-check-input';
+            input.type = 'radio';
+            input.name = 'answer';
+            input.id = `answer-${answer.id}`;
+            input.value = answer.id;
+            
+            const label = document.createElement('label');
+            label.className = 'form-check-label';
+            label.htmlFor = `answer-${answer.id}`;
+            label.textContent = answer.text;
+            
+            div.appendChild(input);
+            div.appendChild(label);
+            answerOptions.appendChild(div);
+        });
+    });
+
+    socket.on('game_started', () => {
+        document.getElementById('waiting-screen').style.display = 'none';
+    });
+
+    socket.on('answer_received', (data) => {
+        // Feedback that answer was received
+        alert(`Answer from ${data.username} received!`);
+    });
+
+    socket.on('game_over', (data) => {
+        document.getElementById('question-screen').style.display = 'none';
+        document.getElementById('leaderboard-screen').style.display = 'block';
+
+        const leaderboardBody = document.getElementById('leaderboard-body');
+        leaderboardBody.innerHTML = '';
+
+        data.leaderboard.forEach((player, index) => {
+            const row = document.createElement('tr');
+            
+            const positionCell = document.createElement('td');
+            positionCell.textContent = index + 1;
+            
+            const usernameCell = document.createElement('td');
+            usernameCell.textContent = player.username;
+            
+            const scoreCell = document.createElement('td');
+            scoreCell.textContent = player.score;
+            
+            row.appendChild(positionCell);
+            row.appendChild(usernameCell);
+            row.appendChild(scoreCell);
+            
+            if (player.username === username) {
+                row.classList.add('current-player');
+            }
+            
+            leaderboardBody.appendChild(row);
+        });
+    });
+
+    document.getElementById('answer-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const selectedAnswer = document.querySelector('input[name="answer"]:checked');
+        if (selectedAnswer) {
+            socket.emit('answer', {
+                code: code,
+                username: username,
+                answer_id: selectedAnswer.value
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %} <!-- the errors stbau💔🥀🥀 -->
+
+{% block title %}Host Quiz - {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="host-container">
+    <h1>Hosting: {{ quiz.title }}</h1>
+    <div class="game-code-box">
+        <h2>Game Code:</h2>
+        <div class="code-display">{{ code }}</div>
+        <button id="copy-code" class="btn btn-primary">Copy Code</button>
+    </div>
+
+    <div class="player-list-container">
+        <h2>Players</h2>
+        <ul id="player-list" class="player-list">
+            <!-- Players will be added here via socket.io -->
+        </ul>
+    </div>
+
+    <button id="start-game" class="btn btn-success">Start Game</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const socket = io();
+    const code = "{{ code }}";
+    
+    // Debug connection status
+    socket.on('connect', () => {
+        console.log('Connected to socket server with ID:', socket.id);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Disconnected from socket server');
+    });
+
+    socket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+    });
+
+    socket.on('player_joined', (data) => {
+        console.log('Player joined:', data.username);
+        const playerList = document.getElementById('player-list');
+        const li = document.createElement('li');
+        li.textContent = data.username;
+        playerList.appendChild(li);
+    });
+
+    document.getElementById('start-game').addEventListener('click', () => {
+        console.log('Attempting to start game with code:', code);
+        socket.emit('start_game', { code: code }, (response) => {
+            if (response && response.error) {
+                console.error('Start game error:', response.error);
+            } else {
+                console.log('Game started successfully');
+            }
+        });
+    });
+
+    document.getElementById('copy-code').addEventListener('click', () => {
+        navigator.clipboard.writeText(code);
+        alert('Code copied to clipboard!');
+    });
+</script>
+{% endblock %}
