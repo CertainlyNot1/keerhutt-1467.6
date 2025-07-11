@@ -1,4 +1,4 @@
-{% extends "base.html" %} <!-- the errors stbau💔🥀🥀 -->
+{% extends "base.html" %}
 
 {% block title %}Host Quiz - {{ quiz.title }}{% endblock %}
 
@@ -19,50 +19,84 @@
     </div>
 
     <button id="start-game" class="btn btn-success">Start Game</button>
+    <div id="error-message" class="alert alert-danger" style="display: none;"></div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 <script>
-    const socket = io();
-    const code = "{{ code }}";
-    
-    // Debug connection status
-    socket.on('connect', () => {
-        console.log('Connected to socket server with ID:', socket.id);
-    });
+    document.addEventListener('DOMContentLoaded', function() {
+        // Важливо: використовуйте правильний URL Socket.IO сервера
+        const socket = io();
+        const code = "{{ code }}";
+        
+        console.log('Connecting to Socket.IO with code:', code);
 
-    socket.on('disconnect', () => {
-        console.log('Disconnected from socket server');
-    });
+        // Debug connection status
+        socket.on('connect', () => {
+            console.log('Connected to socket server with ID:', socket.id);
+            // При підключенні відразу приєднуємось до кімнати хоста
+            socket.emit('host_join', { code: code });
+        });
 
-    socket.on('connect_error', (error) => {
-        console.error('Connection error:', error);
-    });
+        socket.on('disconnect', () => {
+            console.log('Disconnected from socket server');
+        });
 
-    socket.on('player_joined', (data) => {
-        console.log('Player joined:', data.username);
-        const playerList = document.getElementById('player-list');
-        const li = document.createElement('li');
-        li.textContent = data.username;
-        playerList.appendChild(li);
-    });
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+            showError('Failed to connect to game server');
+        });
 
-    document.getElementById('start-game').addEventListener('click', () => {
-        console.log('Attempting to start game with code:', code);
-        socket.emit('start_game', { code: code }, (response) => {
-            if (response && response.error) {
-                console.error('Start game error:', response.error);
+        socket.on('player_joined', (data) => {
+            console.log('Player joined:', data.username);
+            const playerList = document.getElementById('player-list');
+            const li = document.createElement('li');
+            li.textContent = data.username;
+            playerList.appendChild(li);
+        });
+
+        // Handle game start
+        document.getElementById('start-game').addEventListener('click', () => {
+            console.log('Starting game with code:', code);
+            socket.emit('start_game', { code: code });
+        });
+
+        // Handle copy code
+        document.getElementById('copy-code').addEventListener('click', () => {
+            navigator.clipboard.writeText(code).then(() => {
+                alert('Game code copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showError('Failed to copy code');
+            });
+        });
+
+        // Handle game start response
+        socket.on('game_started', (data) => {
+            console.log('Game started response:', data);
+            if (data.status === 'success') {
+                // Перенаправляємо на сторінку гри для хоста
+                window.location.href = `/quiz/play/${code}/host`;
             } else {
-                console.log('Game started successfully');
+                showError(data.message || 'Failed to start game');
             }
         });
-    });
 
-    document.getElementById('copy-code').addEventListener('click', () => {
-        navigator.clipboard.writeText(code);
-        alert('Code copied to clipboard!');
+        socket.on('error', (data) => {
+            console.error('Socket error:', data.message);
+            showError(data.message || 'An error occurred');
+        });
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
     });
 </script>
 {% endblock %}

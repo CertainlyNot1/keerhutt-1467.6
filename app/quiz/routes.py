@@ -210,12 +210,29 @@ def handle_start_game(data):
         
         print(f"Found game session for quiz: {game_sesh.quiz.title}")  # Debug
         
+        # Reset game state
         game_sesh.current_question = 1
+        game_sesh.is_active = True
         db.session.commit()
 
-        question = game_sesh.quiz.questions[0]
-        print(f"Sending first question: {question.text}")  # Debug
+        # Get all players in this session
+        players = Player.query.filter_by(game_sesh_id=game_sesh.id).all()
         
+        # Send game started event to host
+        emit('game_started', {
+            'status': 'success',
+            'message': 'Game started successfully',
+            'player_count': len(players)
+        }, room=request.sid)
+        
+        # Send game started event to all players
+        emit('game_started', {
+            'status': 'success',
+            'message': 'Game started!'
+        }, room=code)
+        
+        # Send first question to all
+        question = game_sesh.quiz.questions[0]
         emit('question', {
             'text': question.text,
             'answers': [{'id': a.id, 'text': a.text} for a in question.answers],
@@ -223,13 +240,11 @@ def handle_start_game(data):
             'total_questions': len(game_sesh.quiz.questions)
         }, room=code)
 
-        emit('game_started', {'status': 'success'}, room=code)
         print("Game started successfully")  # Debug
         
     except Exception as e:
         print(f"Error in start_game: {str(e)}")  # Debug
-        emit('error', {'message': str(e)})
-
+        emit('error', {'message': str(e)}, room=request.sid)
 @sockatia.on('answer')
 def handle_answer(data):
     username = data['username']
@@ -272,7 +287,18 @@ def handle_next_question(data):
         db.session.commit()
 
 
-
+@sockatia.on('host_join')
+def handle_host_join(data):
+    code = data['code']
+    sesh_id = request.sid
+    Game_sesh = GameSesh.query.filter_by(code=code, is_active=True).first()
+    
+    if not Game_sesh:
+        emit('error', {'message': "Invalid game code"})
+        return
+    
+    join_room(code)
+    print(f'Host joined game with code: {code}')
 
 
 
