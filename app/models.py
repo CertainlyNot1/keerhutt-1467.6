@@ -30,3 +30,20 @@ class Answer(db.Model):
     text = db.Column(db.String(50), nullable=False)
     is_right = db.Column(db.Boolean, default=False)
     question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
+
+class GameSesh(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable = False)
+    code = db.Column(db.String(7), unique = True, nullable = False)
+    is_active = db.Column(db.Boolean, default = True)
+    curr_question = db.Column(db.Integer, default = 0)
+    quiz = db.relationship('Quiz', backref = 'game_sesh')
+    players = db.relationship('Player', backref = 'game_seshes', lazy = True)
+
+class Player(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    username = db.Column(db.String(50)) #Jenna Talia, Phil MCcrackin
+    score = db.Column(db.Integer, default = 0)
+    game_sesh_id = db.Column(db.Integer, db.ForeignKey('game_sesh.id'), nullable = False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable = False)
+    sid = db.Column(db.String)

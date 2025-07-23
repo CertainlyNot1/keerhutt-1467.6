@@ -18,6 +18,7 @@
             </div>
             <div class="card-footer bg-transparent">
                 <a href="{{ url_for('quiz.Play_qizz', quiz_id=quiz.id) }}" class="btn btn-success">Play</a>
+                <a href="{{ url_for('quiz.host_quiz', quiz_id=quiz.id) }}" class="btn btn-success">Host</a>
                 <a href="{{ url_for('quiz.view_quiz', quiz_id=quiz.id) }}" class="btn btn-info">View</a>
                 {% if quiz.creator == current_user %}
                 <form method="POST" action="{{ url_for('quiz.delete_qizz', quiz_id=quiz.id) }}" class="d-inline">

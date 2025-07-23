@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="host-live-container">
+    <h1>Hosting Game: {{ code }}</h1>
+    
+    <div id="player-count">Players joined: 0</div>
+    
+    <div id="question-container" class="question-box" style="display: none;">
+        <h2 id="question-text"></h2>
+        <div id="answers-container" class="answers-grid"></div>
+    </div>
+    
+    <div id="leaderboard-container" style="display: none;">
+        <h3>Leaderboard</h3>
+        <ul id="leaderboard-list"></ul>
+    </div>
+    
+    <button id="start-game" class="btn btn-primary">Start Game</button>
+    <button id="next-question" class="btn btn-primary" style="display: none;">Next Question</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    const socket = io();
+    const code = "{{ code }}";
+    let playerCount = 0;
+
+    // Join as host
+    socket.on('connect', () => {
+        console.log('Connected as host');
+        socket.emit('host_join', { code: code });
+    });
+
+    // Handle player joined event
+    socket.on('player_joined', (data) => {
+        playerCount++;
+        document.getElementById('player-count').textContent = `Players joined: ${playerCount}`;
+    });
+
+    // Start game button
+    document.getElementById('start-game').addEventListener('click', () => {
+        socket.emit('start_game', { code: code });
+        document.getElementById('start-game').style.display = 'none';
+        document.getElementById('next-question').style.display = 'block';
+    });
+
+    // Next question button
+    document.getElementById('next-question').addEventListener('click', () => {
+        socket.emit('next_question', { code: code });
+    });
+
+    // Display question
+    socket.on('question', (data) => {
+        const questionContainer = document.getElementById('question-container');
+        const questionText = document.getElementById('question-text');
+        const answersContainer = document.getElementById('answers-container');
+        
+        // Clear previous answers
+        answersContainer.innerHTML = '';
+        
+        // Set question text
+        questionText.textContent = `Question ${data.question_number}: ${data.text}`;
+        
+        // Add answers
+        data.answers.forEach(answer => {
+            const answerElement = document.createElement('div');
+            answerElement.className = 'answer-item';
+            answerElement.textContent = answer.text;
+            answersContainer.appendChild(answerElement);
+        });
+        
+        questionContainer.style.display = 'block';
+        document.getElementById('leaderboard-container').style.display = 'none';
+    });
+
+    // Display game over with leaderboard
+    socket.on('game_over', (data) => {
+        const leaderboardContainer = document.getElementById('leaderboard-container');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        
+        // Clear previous leaderboard
+        leaderboardList.innerHTML = '';
+        
+        // Add players to leaderboard
+        data.leaderboard.forEach(player => {
+            const playerItem = document.createElement('li');
+            playerItem.textContent = `${player.username}: ${player.score} points`;
+            leaderboardList.appendChild(playerItem);
+        });
+        
+        document.getElementById('question-container').style.display = 'none';
+        leaderboardContainer.style.display = 'block';
+        document.getElementById('next-question').style.display = 'none';
+    });
+
+    // Handle errors
+    socket.on('error', (data) => {
+        alert(data.message);
+    });
+</script>
+
+<style>
+    .question-box {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    
+    .answers-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .answer-item {
+        background: #e9ecef;
+        padding: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .answer-item:hover {
+        background: #dee2e6;
+    }
+    
+    #leaderboard-list {
+        list-style-type: none;
+        padding: 0;
+    }
+    
+    #leaderboard-list li {
+        padding: 8px;
+        background: #f1f1f1;
+        margin-bottom: 5px;
+        border-radius: 4px;
+    }
+    
+    #player-count {
+        margin-bottom: 15px;
+        font-size: 1.2em;
+        color: #666;
+    }
+</style>
+{% endblock %}
