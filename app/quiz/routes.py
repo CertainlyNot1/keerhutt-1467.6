@@ -146,7 +146,7 @@ def join_sesh():
     if form.validate_on_submit():
         Game_sesh = GameSesh.query.filter_by(code=form.code.data, is_active=True).first()
         if Game_sesh:
-            return redirect(url_for('quiz.play_live', code=form.code.data, username=form.username.data))
+            return redirect(url_for('quiz.Play_sesh', code=form.code.data, username=form.username.data))
         else:
             flash('U dumb, try a different code lol','danger')
     return render_template('quiz/join.html', form=form)
@@ -300,7 +300,11 @@ def handle_host_join(data):
     join_room(code)
     print(f'Host joined game with code: {code}')
 
-
+@quiz_bp.route('/quiz/play/<code>/host')
+@login_required
+def hosty(code):
+    Game_sesh = GameSesh.query.filter_by(code=code).first_or_404()
+    return render_template('quiz/host_live.html',code=code)
 
 
 
