@@ -24,24 +24,28 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Важливо: використовуйте правильний URL Socket.IO сервера
-        const socket = io();
-        const code = "{{ code }}";
+        // Initialize Socket.IO with proper configuration
+        const socket = io(window.location.origin, {
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            transports: ['websocket', 'polling']
+        });
         
-        console.log('Connecting to Socket.IO with code:', code);
+        const code = "{{ code }}";
+        console.log('Initializing host interface for game:', code);
 
-        // Debug connection status
+        // Connection management
         socket.on('connect', () => {
-            console.log('Connected to socket server with ID:', socket.id);
-            // При підключенні відразу приєднуємось до кімнати хоста
+            console.log('Connected to server as host with ID:', socket.id);
             socket.emit('host_join', { code: code });
         });
 
         socket.on('disconnect', () => {
-            console.log('Disconnected from socket server');
+            console.log('Disconnected from server');
+            showError('Connection lost. Attempting to reconnect...');
         });
 
         socket.on('connect_error', (error) => {
@@ -49,41 +53,63 @@
             showError('Failed to connect to game server');
         });
 
+        // Player management
         socket.on('player_joined', (data) => {
             console.log('Player joined:', data.username);
             const playerList = document.getElementById('player-list');
-            const li = document.createElement('li');
-            li.textContent = data.username;
-            playerList.appendChild(li);
+            if (playerList) {
+                const li = document.createElement('li');
+                li.textContent = data.username;
+                li.id = `player-${data.username}`;
+                playerList.appendChild(li);
+            }
         });
 
-        // Handle game start
-        document.getElementById('start-game').addEventListener('click', () => {
-            console.log('Starting game with code:', code);
-            socket.emit('start_game', { code: code });
+        socket.on('player_left', (data) => {
+            console.log('Player left:', data.username);
+            const playerElement = document.getElementById(`player-${data.username}`);
+            if (playerElement) {
+                playerElement.remove();
+            }
         });
 
-        // Handle copy code
-        document.getElementById('copy-code').addEventListener('click', () => {
-            navigator.clipboard.writeText(code).then(() => {
-                alert('Game code copied to clipboard!');
-            }).catch(err => {
-                console.error('Failed to copy:', err);
-                showError('Failed to copy code');
+        // Game control
+        const startGameBtn = document.getElementById('start-game');
+        if (startGameBtn) {
+            startGameBtn.addEventListener('click', () => {
+                console.log('Starting game with code:', code);
+                socket.emit('start_game', { code: code });
             });
-        });
+        }
 
-        // Handle game start response
+        // Copy code functionality
+        const copyCodeBtn = document.getElementById('copy-code');
+        if (copyCodeBtn) {
+            copyCodeBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(code).then(() => {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Game code copied to clipboard!';
+                    document.body.appendChild(alert);
+                    setTimeout(() => alert.remove(), 3000);
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    showError('Failed to copy code');
+                });
+            });
+        }
+
+        // Game state handling
         socket.on('game_started', (data) => {
             console.log('Game started response:', data);
             if (data.status === 'success') {
-                // Перенаправляємо на сторінку гри для хоста
                 window.location.href = `/quiz/play/${code}/host`;
             } else {
                 showError(data.message || 'Failed to start game');
             }
         });
 
+        // Error handling
         socket.on('error', (data) => {
             console.error('Socket error:', data.message);
             showError(data.message || 'An error occurred');
@@ -91,11 +117,13 @@
 
         function showError(message) {
             const errorDiv = document.getElementById('error-message');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-            setTimeout(() => {
-                errorDiv.style.display = 'none';
-            }, 5000);
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 5000);
+            }
         }
     });
 </script>
